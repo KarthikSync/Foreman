@@ -1,0 +1,27 @@
+id: list_unread_mail
+intent: "List today's unread Outlook messages. Read-only, no body."
+profile: default
+
+allowed_tools:
+  - outlook.mail.list
+
+forbidden_tools:
+  - outlook.mail.read
+  - outlook.mail.prepare_send
+  - outlook.mail.send_approved
+  - teams.chat.post_approved
+  - browser.click
+  - browser.type
+
+success_criteria:
+  - no_destructive_action
+  - all_outputs_carry_taint_tags
+
+steps:
+  - name: list_unread
+    tool: outlook.mail.list
+    inputs:
+      limit: 25
+      unread_only: true
+    expect:
+      ok: true
