@@ -1,0 +1,77 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same ref when a new commit lands. Saves
+# CI minutes; matches the pinned test command's intent (we don't need stale
+# test runs to finish).
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install runtime + dev extras
+        # Browser extra is intentionally NOT installed here — tests must run
+        # without Playwright or Edge per the test discipline in CLAUDE.md.
+        # The optional `mcp` extra is included so the MCP stdio discipline
+        # tests can exercise the real server module.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,mcp]"
+
+      - name: Run pinned test command
+        # PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 is mandatory: plain `pytest` may
+        # hang or behave unpredictably due to environment-installed plugins.
+        # See root CLAUDE.md "Test discipline".
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+        run: python -m pytest -q
+
+  # Optional second job: smoke-import the package on a clean install with
+  # no extras, to catch accidental top-level imports of optional deps.
+  no-optional-deps:
+    name: Import without optional deps (Python 3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install with no extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Import top-level package and key modules
+        # The package and its core modules must import cleanly without
+        # mcp, playwright, or pytest installed. If this job fails, something
+        # is doing a non-lazy import of an optional dependency.
+        run: |
+          python -c "import openclaw"
+          python -c "import openclaw.runtime.bootstrap"
+          python -c "import openclaw.providers.browser"
+          python -c "import openclaw.providers.outlook"
+          python -c "import openclaw.harness.runner"
