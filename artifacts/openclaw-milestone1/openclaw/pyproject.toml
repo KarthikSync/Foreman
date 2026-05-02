@@ -1,0 +1,38 @@
+[project]
+name = "openclaw"
+version = "0.1.0"
+description = "Local agent action framework for Windows and Microsoft 365 (codename: Foreman)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.5",
+  "jsonschema>=4.20",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.0"]
+browser = ["playwright>=1.40"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+openclaw = "openclaw.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"openclaw.harness" = ["scenarios/*.yaml"]
+
+# Reproducible test invocation. Required so `pytest` works the same way from a
+# clean checkout and inside CI without depending on environment-installed
+# pytest plugins.
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+# In CI also set: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1

@@ -1,0 +1,14 @@
+id: refuse_primitive_when_gated
+intent: "Verify gated primitives are refused under default config."
+profile: default
+
+success_criteria:
+  - no_destructive_action
+
+steps:
+  - name: try_primitive
+    tool: browser.click
+    inputs:
+      ref: "fake-ref"
+    expect:
+      ok: false
